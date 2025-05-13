@@ -36,6 +36,7 @@ func Worker(conn *amqp.Connection, queueName, exchangeName string, handler func(
 		log.Fatalf("failed to bind a queue: %v", err)
 	}
 
+	// start consuming messages from the queue
 	msgs, err := ch.Consume(
 		q.Name,
 		"",
