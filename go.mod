@@ -1,4 +1,4 @@
-module message-broker-module
+module github.com/moronimotta/message-broker-module
 
 go 1.24.2
 
