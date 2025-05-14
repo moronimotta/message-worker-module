@@ -11,7 +11,19 @@ func Worker(conn *amqp.Connection, queueName, exchangeName string, handler func(
 	if err != nil {
 		log.Fatalf("failed to open a channel: %v", err)
 	}
-	defer ch.Close()
+
+	err = ch.ExchangeDeclare(
+		exchangeName, // name of the exchange
+		"fanout",     // type of the exchange (e.g., direct, fanout, topic, headers)
+		true,         // durable
+		false,        // auto-deleted
+		false,        // internal
+		false,        // no-wait
+		nil,          // arguments
+	)
+	if err != nil {
+		log.Fatalf("failed to declare an exchange: %v", err)
+	}
 
 	q, err := ch.QueueDeclare(
 		queueName,
@@ -54,6 +66,7 @@ func Worker(conn *amqp.Connection, queueName, exchangeName string, handler func(
 
 	// process each message using the handler function
 	for msg := range msgs {
+		log.Printf("Received a message: %s", msg.Body)
 		handler(msg)
 	}
 }
