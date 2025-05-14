@@ -3,7 +3,7 @@ package message
 import (
 	"log"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 func Worker(conn *amqp.Connection, queueName, exchangeName string, handler func(amqp.Delivery)) {

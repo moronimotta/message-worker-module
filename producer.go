@@ -3,10 +3,10 @@ package message
 import (
 	"log"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func SendMessage(conn *amqp.Connection, message []byte, exchangeName, routingKey string) {
+func SendMessage(conn *amqp.Connection, exchangeName, routingKey string, message []byte) {
 
 	ch, err := conn.Channel()
 	if err != nil {
