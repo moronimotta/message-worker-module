@@ -6,7 +6,14 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func Worker(conn *amqp.Connection, queueName, exchangeName string, handler func(amqp.Delivery)) {
+func Worker(urlConnection, queueName, exchangeName string, handler func(amqp.Delivery)) {
+
+	conn, err := amqp.Dial(urlConnection)
+	if err != nil {
+		log.Fatalf("failed to connect to RabbitMQ: %v", err)
+	}
+	defer conn.Close()
+
 	ch, err := conn.Channel()
 	if err != nil {
 		log.Fatalf("failed to open a channel: %v", err)
