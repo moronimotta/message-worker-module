@@ -1,6 +1,10 @@
 package message
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	amqp "github.com/rabbitmq/amqp091-go"
+)
 
 type Event struct {
 	Event string `json:"event"`
@@ -16,4 +20,19 @@ func (e *Event) Unmarshal(data []byte) error {
 		return err
 	}
 	return nil
+}
+
+type Consumer struct {
+	ConnectionURL string
+	QueueName     string
+	EventName     string
+	TopicName     string
+}
+
+type Publisher struct {
+	ConnectionURL string
+	Connection    *amqp.Connection
+	TopicName     string
+	EventName     string
+	Message       []byte
 }

@@ -6,30 +6,52 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func SendMessage(conn *amqp.Connection, exchangeName, routingKey string, message []byte) {
+// SendMessage checks if a RabbitMQ connection is available in the provided Publisher input,
+// or creates a new one if not. It receives a message of type Event, marshals it into bytes,
+// and sends it as the body of a message to a specific topic using RabbitMQ.
+func SendMessage(publisherInput Publisher, message Event) {
+	var (
+		conn *amqp.Connection
+		ch   *amqp.Channel
+		err  error
+	)
 
-	ch, err := conn.Channel()
+	// Use existing connection if available
+	if publisherInput.Connection != nil {
+		conn = publisherInput.Connection
+	} else {
+		conn, err = amqp.Dial(publisherInput.ConnectionURL)
+		if err != nil {
+			log.Fatalf("failed to connect to RabbitMQ: %v", err)
+		}
+		defer conn.Close()
+	}
+
+	ch, err = conn.Channel()
 	if err != nil {
 		log.Fatalf("failed to open a channel: %v", err)
 	}
-
 	defer ch.Close()
 
-	body := message
+	messageBytes, err := message.Marshal()
+	if err != nil {
+		log.Fatalf("failed to marshal message: %v", err)
+	}
+	publisherInput.Message = messageBytes
+
 	err = ch.Publish(
-		exchangeName,
-		routingKey,
+		publisherInput.TopicName,
+		"",
 		false,
 		false,
 		amqp.Publishing{
 			ContentType: "application/json",
-			Body:        body,
+			Body:        messageBytes,
 		},
 	)
 	if err != nil {
 		log.Fatalf("failed to publish a message: %v", err)
 	}
 
-	log.Printf("message sent: %v", body)
-
+	log.Printf("message sent: %v", string(messageBytes))
 }
