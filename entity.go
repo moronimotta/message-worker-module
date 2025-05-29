@@ -33,6 +33,4 @@ type Publisher struct {
 	ConnectionURL string
 	Connection    *amqp.Connection
 	TopicName     string
-	EventName     string
-	Message       []byte
 }

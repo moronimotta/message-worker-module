@@ -37,7 +37,6 @@ func SendMessage(publisherInput Publisher, message Event) {
 	if err != nil {
 		log.Fatalf("failed to marshal message: %v", err)
 	}
-	publisherInput.Message = messageBytes
 
 	err = ch.Publish(
 		publisherInput.TopicName,
