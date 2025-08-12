@@ -93,7 +93,7 @@ func Listen(consumerInput Consumer, handler func(event Event) error) {
 			log.Printf("Failed to unmarshal message: %v", err)
 			// Reject the message, don't requeue malformed messages
 			msg.Nack(false, false)
-			return
+			continue // Skip to next message, don't ack
 		}
 		err = handler(event)
 		if err != nil {
@@ -106,9 +106,10 @@ func Listen(consumerInput Consumer, handler func(event Event) error) {
 				log.Printf("Non-retryable error, rejecting message: %v", err)
 				msg.Nack(false, false) // Don't requeue
 			}
+			continue // Skip to next message, don't ack
 		}
 
-		// Acknowledge the message
+		// Acknowledge the message only if no errors occurred
 		msg.Ack(false)
 	}
 }
