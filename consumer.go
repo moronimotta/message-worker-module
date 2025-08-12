@@ -72,7 +72,7 @@ func Listen(consumerInput Consumer, handler func(event Event) error) {
 	msgs, err := ch.Consume(
 		q.Name,
 		"",
-		true,
+		false,
 		false,
 		false,
 		false,
