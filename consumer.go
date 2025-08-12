@@ -2,6 +2,7 @@ package message
 
 import (
 	"log"
+	"strings"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -16,8 +17,8 @@ import (
 // Parameters:
 //   - consumerInput: Consumer configuration containing connection URL, topic (exchange) name,
 //     queue name, and event name (routing key).
-//   - handler: A function that processes each received amqp.Delivery message.
-func Listen(consumerInput Consumer, handler func(amqp.Delivery)) {
+//   - handler: A function that processes each Event received from the queue and retuns an error.
+func Listen(consumerInput Consumer, handler func(event Event) error) {
 
 	conn, err := amqp.Dial(consumerInput.ConnectionURL)
 	if err != nil {
@@ -86,6 +87,70 @@ func Listen(consumerInput Consumer, handler func(amqp.Delivery)) {
 	// process each message using the handler function
 	for msg := range msgs {
 		log.Printf("Received a message: %s", msg.Body)
-		handler(msg)
+		var event Event
+		err := event.Unmarshal(msg.Body)
+		if err != nil {
+			log.Printf("Failed to unmarshal message: %v", err)
+			// Reject the message, don't requeue malformed messages
+			msg.Nack(false, false)
+			return
+		}
+		err = handler(event)
+		if err != nil {
+			log.Printf("Handler error: %v", err)
+			// Decide whether to requeue or reject based on error type
+			if isRetryableError(err) {
+				log.Printf("Retryable error, requeuing message: %v", err)
+				msg.Nack(false, true) // Requeue for retry
+			} else {
+				log.Printf("Non-retryable error, rejecting message: %v", err)
+				msg.Nack(false, false) // Don't requeue
+			}
+		}
+
+		// Acknowledge the message
+		msg.Ack(false)
 	}
+}
+
+// isRetryableError determines if an error should trigger a message requeue
+func isRetryableError(err error) bool {
+	errorMsg := strings.ToLower(err.Error())
+
+	// Retryable errors (temporary issues)
+	retryablePatterns := []string{
+		"connection refused",
+		"timeout",
+		"temporary failure",
+		"database is locked",
+		"too many connections",
+		"network unreachable",
+	}
+
+	for _, pattern := range retryablePatterns {
+		if strings.Contains(errorMsg, pattern) {
+			return true
+		}
+	}
+
+	// Non-retryable errors (permanent issues)
+	nonRetryablePatterns := []string{
+		"invalid",
+		"malformed",
+		"not found",
+		"unauthorized",
+		"forbidden",
+		"unhandled event type",
+		"failed to unmarshal",
+		"event data is not of type",
+	}
+
+	for _, pattern := range nonRetryablePatterns {
+		if strings.Contains(errorMsg, pattern) {
+			return false
+		}
+	}
+
+	// Default to retryable for unknown errors
+	return true
 }
